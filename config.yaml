@@ -1,0 +1,80 @@
+# ==============================================================================
+# Video Mask Inpainting Pipeline - Default Configuration
+# ==============================================================================
+
+# --- Workspace ---
+workspace:
+  base_dir: "./workspace"
+  frames_dir: "frames"
+  masks_raw_dir: "masks_raw"
+  masks_feathered_dir: "masks_feathered"
+  generated_frames_dir: "generated_frames"
+  composite_dir: "composite"
+
+# --- Video Preprocessing (Node 02) ---
+preprocessing:
+  max_resolution: 1280          # 너비/높이가 이 값을 초과하면 스케일다운
+  target_short_side: 720        # 스케일다운 시 목표 (짧은 쪽 기준)
+  normalize_fps: true           # FPS 정규화 활성화
+  target_fps: 24                # 정규화 목표 FPS
+  frame_format: "jpg"           # 프레임 저장 포맷 (jpg: SAM 2 호환, png: 무손실)
+  jpeg_quality: 95              # JPEG 품질 (frame_format이 jpg일 때)
+
+# --- SAM 2 VOS Tracking (Node 03) ---
+sam2:
+  model_cfg: "configs/sam2.1/sam2.1_hiera_b+.yaml"
+  checkpoint: "checkpoints/sam2.1_hiera_base_plus.pt"
+  checkpoint_url: "https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_base_plus.pt"
+  auto_download: true           # 체크포인트 자동 다운로드
+  device: "cuda"
+  dtype: "bfloat16"             # BF16 추론
+
+# --- Mask Refinement (Node 04) ---
+mask_refinement:
+  dilation_kernel_size: 7       # Dilation 커널 크기 (7 또는 9)
+  dilation_iterations: 2        # Dilation 반복 횟수
+  gaussian_kernel_size: 11      # Gaussian Blur 커널 크기
+  gaussian_sigma: 0             # Gaussian Blur 시그마 (0 = 자동)
+  num_workers: 4                # 멀티프로세싱 워커 수
+
+# --- Video DiT Inpainting (Node 05) ---
+inpainting:
+  backend: "cogvideox"          # "cogvideox" 또는 "wan21"
+  
+  cogvideox:
+    model_id: "THUDM/CogVideoX-5b-I2V"
+    dtype: "float16"
+    quantization: "fp8"         # "fp8", "nf4", 또는 "none"
+    num_inference_steps: 50
+    guidance_scale: 6.0
+    chunk_frames: 49            # 슬라이딩 윈도우 프레임 단위
+    enable_cpu_offload: true
+    enable_vae_tiling: true
+  
+  wan21:
+    model_id: "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
+    dtype: "float16"
+    quantization: "nf4"         # "nf4", "fp8", 또는 "none"
+    num_inference_steps: 50
+    guidance_scale: 5.0
+    chunk_frames: 49
+    enable_cpu_offload: true
+    enable_vae_tiling: true
+
+# --- Final Assembly (Node 06) ---
+assembly:
+  encoder: "h264_nvenc"         # FFmpeg 인코더 (h264_nvenc, libx264)
+  pixel_format: "yuv420p"
+  crf: 18                       # 품질 (낮을수록 고품질, NVENC에서는 무시)
+  preset: "p4"                  # NVENC 프리셋
+
+# --- Error Handling ---
+error_handling:
+  max_oom_retries: 3            # OOM 발생 시 최대 재시도 횟수
+  resolution_scale_factor: 0.8  # OOM 시 해상도 축소 비율
+  min_resolution: 480           # 최소 해상도 제한
+
+# --- VRAM Management ---
+vram:
+  max_idle_vram_mb: 1024        # 모델 언로드 후 최대 허용 VRAM (MB)
+  force_flush: true             # 노드 전환 시 강제 flush

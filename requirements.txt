@@ -1,0 +1,27 @@
+# ==============================================================================
+# Video Mask Inpainting Pipeline - Dependencies
+# ==============================================================================
+# Core
+torch>=2.1.0
+torchvision>=0.16.0
+numpy>=1.24.0
+Pillow>=10.0.0
+opencv-python>=4.8.0
+
+# Diffusers & Transformers (Video DiT Inpainting)
+diffusers>=0.30.0
+transformers>=4.38.0
+accelerate>=0.25.0
+safetensors>=0.4.0
+
+# SAM 2 (install separately: pip install git+https://github.com/facebookresearch/sam2.git)
+# sam-2
+
+# Quantization
+bitsandbytes>=0.42.0
+
+# Configuration
+pyyaml>=6.0
+
+# Logging
+tqdm>=4.65.0

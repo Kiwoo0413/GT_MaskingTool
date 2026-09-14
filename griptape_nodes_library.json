@@ -1,0 +1,112 @@
+{
+  "name": "Video Mask & Inpainting Library",
+  "library_schema_version": "0.7.0",
+  "metadata": {
+    "author": "KIWOO",
+    "description": "Spatio-temporal Masking (SAM 2) & Generative DiT Inpainting Pipeline with 16GB VRAM isolation",
+    "library_version": "1.0.0",
+    "engine_version": "0.100.2",
+    "tags": [
+      "Griptape",
+      "Video",
+      "Masking",
+      "SAM2",
+      "Inpainting",
+      "Diffusion",
+      "CogVideoX",
+      "Wan2.1"
+    ],
+    "dependencies": {
+      "pip_dependencies": [
+        "torch>=2.4.0",
+        "diffusers>=0.30.0",
+        "opencv-python>=4.8.0",
+        "ffmpeg-python>=0.2.0",
+        "numpy>=1.26.0",
+        "pillow>=10.0.0"
+      ]
+    }
+  },
+  "categories": [
+    {
+      "VideoMaskInpainting": {
+        "color": "border-cyan-500",
+        "title": "Video Mask & Inpainting",
+        "description": "Nodes for Spatio-temporal Masking and Video Inpainting",
+        "icon": "video"
+      }
+    }
+  ],
+  "nodes": [
+    {
+      "class_name": "VideoMaskInpaintingAllInOneNode",
+      "file_path": "video_masking_nodes/pipeline_all_in_one_node.py",
+      "metadata": {
+        "category": "VideoMaskInpainting",
+        "description": "Complete 6-stage video mask & inpainting pipeline in a single node",
+        "display_name": "Mask Inpainting (All-in-One)",
+        "icon": "sparkles"
+      }
+    },
+    {
+      "class_name": "VideoMaskPromptParserNode",
+      "file_path": "video_masking_nodes/prompt_parser_node.py",
+      "metadata": {
+        "category": "VideoMaskInpainting",
+        "description": "Node 01: Parse natural language instructions and seed coordinates",
+        "display_name": "Node 01: Prompt & Intent Parser",
+        "icon": "chat"
+      }
+    },
+    {
+      "class_name": "VideoFrameDecomposerNode",
+      "file_path": "video_masking_nodes/frame_decomposer_node.py",
+      "metadata": {
+        "category": "VideoMaskInpainting",
+        "description": "Node 02: Extract video frames with 720p scaling and FPS normalization",
+        "display_name": "Node 02: Frame Decomposer",
+        "icon": "film"
+      }
+    },
+    {
+      "class_name": "SAM2VOSNode",
+      "file_path": "video_masking_nodes/sam2_tracker_node.py",
+      "metadata": {
+        "category": "VideoMaskInpainting",
+        "description": "Node 03: SAM 2 Video Object Segmentation tracker with 0MB VRAM Flush",
+        "display_name": "Node 03: SAM 2 Temporal Tracker",
+        "icon": "target"
+      }
+    },
+    {
+      "class_name": "MaskRefinementNode",
+      "file_path": "video_masking_nodes/mask_refinement_node.py",
+      "metadata": {
+        "category": "VideoMaskInpainting",
+        "description": "Node 04: Mask dilation and Gaussian blur edge feathering (Multiprocessing)",
+        "display_name": "Node 04: Mask Refinement",
+        "icon": "sliders"
+      }
+    },
+    {
+      "class_name": "VideoDiTInpainterNode",
+      "file_path": "video_masking_nodes/video_dit_node.py",
+      "metadata": {
+        "category": "VideoMaskInpainting",
+        "description": "Node 05: Generative DiT Video Inpainting (CogVideoX FP8 / Wan2.1)",
+        "display_name": "Node 05: Video DiT Inpainter",
+        "icon": "wand"
+      }
+    },
+    {
+      "class_name": "VideoCompositorNode",
+      "file_path": "video_masking_nodes/compositor_node.py",
+      "metadata": {
+        "category": "VideoMaskInpainting",
+        "description": "Node 06: Alpha composite blend and NVENC H.264 video assembly with audio",
+        "display_name": "Node 06: Alpha Compositor & Assembler",
+        "icon": "video"
+      }
+    }
+  ]
+}
