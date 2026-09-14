@@ -105,8 +105,17 @@ class MaskRefinementNode(DataNode):
             Parameter(
                 name="feathered_masks_dir",
                 type="str",
-                tooltip="후처리 완료된 페더링 마스크 폴더 경로",
+                tooltip="후처리 완료된 페더링 마스크 폴더 경로 (Grayscale)",
                 display_name="Feathered Masks Dir",
+                allowed_modes={ParameterMode.OUTPUT},
+            )
+        )
+        self.add_parameter(
+            Parameter(
+                name="red_masks_dir",
+                type="str",
+                tooltip="Red 컬러로 채색된 알파 마스크 시퀀스 폴더 경로",
+                display_name="Red Masks Dir",
                 allowed_modes={ParameterMode.OUTPUT},
             )
         )
@@ -141,6 +150,9 @@ class MaskRefinementNode(DataNode):
             out_dir = Path(tempfile.mkdtemp(prefix="gt_masks_feathered_"))
         out_dir.mkdir(parents=True, exist_ok=True)
 
+        red_out_dir = out_dir.parent / f"{out_dir.name}_red"
+        red_out_dir.mkdir(parents=True, exist_ok=True)
+
         cfg = MaskRefineConfig(
             dilation_kernel_size=dilation_k,
             dilation_iterations=dilation_it,
@@ -149,12 +161,14 @@ class MaskRefinementNode(DataNode):
             num_workers=workers,
         )
 
-        feathered_dir = run_node04(
+        feathered_dir, red_dir = run_node04(
             raw_masks_dir=raw_masks_dir,
             output_dir=str(out_dir),
             config=cfg,
+            red_masks_dir=red_out_dir,
         )
 
         mask_files = list(Path(feathered_dir).glob("*.png"))
         self.set_parameter_value("feathered_masks_dir", str(feathered_dir))
+        self.set_parameter_value("red_masks_dir", str(red_dir) if red_dir else "")
         self.set_parameter_value("processed_count", len(mask_files))

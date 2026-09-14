@@ -67,6 +67,8 @@ Griptape 캔버스에서 `+ Create New Workflow`를 클릭한 후, 아래 두 �
 │                                                        │
 │                                [출력 포트]             │
 │                                Final Video Path ───────▶ (완성된 MP4 경로)
+│                                Red Overlay Video Path ─▶ (빨간색 마스크 검수 MP4)
+│                                Masks Dir ──────────────▶ (알파 마스크 폴더)
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -78,7 +80,7 @@ Griptape 캔버스에서 `+ Create New Workflow`를 클릭한 후, 아래 두 �
    * **`Seed Coords`**: 편집 대상 객체의 중심 좌표 (예: `640,360`)
    * **`Backend`**: 사용할 생성 모델 선택 (`cogvideox` 또는 `wan2.1`)
    * **`Output Video Path`**: 저장 경로 (비워두면 임시 폴더에 자동 생성)
-3. **실행**: 상단의 **Run** 버튼을 누르면 내부에서 6단계가 순차 실행되며, **`Final Video Path`** 포트로 완성된 영상 경로가 출력됩니다.
+3. **실행**: 상단의 **Run** 버튼을 누르면 내부에서 6단계가 순차 실행되며, **`Final Video Path`**(완성 영상)와 함께 **`Red Overlay Video Path`**(빨간색 마스크 검수 비디오)가 동시에 출력됩니다!
 
 ---
 
@@ -155,7 +157,8 @@ Griptape 캔버스에서 `+ Create New Workflow`를 클릭한 후, 아래 두 �
   * `Dilation Kernel`: `7` (기본값)
   * `Blur Kernel`: `11` (기본값)
 * **출력 포트 (Outputs)**:
-  * `feathered_masks_dir` ➔ **Node 05의 `masks_dir`** 및 **Node 06의 `masks_dir`** 2곳으로 연결
+  * `feathered_masks_dir` ➔ **Node 05의 `masks_dir`** 및 **Node 06의 `masks_dir`** 2곳으로 연결 (Grayscale)
+  * `red_masks_dir` ➔ **순수 Red 컬러로 채색된 알파 마스크 시퀀스 폴더** (R 채널 매트 검수용)
 
 ---
 
@@ -181,11 +184,13 @@ Griptape 캔버스에서 `+ Create New Workflow`를 클릭한 후, 아래 두 �
   * `Original Video Path`: 원본 영상 파일 경로 (`D:\videos\input.mp4`)
   * `Generated Frames Dir` ⬅ **Node 05의 `generated_frames_dir`** 연결
   * `Feathered Masks Dir` ⬅ **Node 04의 `feathered_masks_dir`** 연결
+  * `Frames Directory`: *(선택)* **Node 02의 `frames_dir`** 연결 (Red Overlay 비디오 생성 시)
 * **속성 설정 (Properties)**:
   * `Output Video Path`: 최종 저장 경로 (예: `D:\output.mp4`, 비워두면 자동 생성)
   * `Video Codec`: `h264_nvenc`
 * **출력 포트 (Outputs)**:
-  * `final_video_path` ➔ **최종 완성된 비디오 파일의 경로**가 출력됩니다! 🎬
+  * `final_video_path` ➔ **최종 완성된 비디오 파일의 경로** 출력 🎬
+  * `red_overlay_video_path` ➔ **마스크 영역이 빨간색(Red)으로 오버레이된 검수용 비디오 파일 경로** 출력 🔴
 
 ---
 

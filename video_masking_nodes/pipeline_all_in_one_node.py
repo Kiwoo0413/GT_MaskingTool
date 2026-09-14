@@ -133,6 +133,24 @@ class VideoMaskInpaintingAllInOneNode(DataNode):
         )
         self.add_parameter(
             Parameter(
+                name="red_overlay_video_path",
+                type="str",
+                tooltip="마스크가 빨간색으로 오버레이된 검수용 비디오 파일 경로",
+                display_name="Red Overlay Video Path",
+                allowed_modes={ParameterMode.OUTPUT},
+            )
+        )
+        self.add_parameter(
+            Parameter(
+                name="masks_dir",
+                type="str",
+                tooltip="생성된 페더링 알파 마스크 시퀀스 폴더 경로",
+                display_name="Masks Dir",
+                allowed_modes={ParameterMode.OUTPUT},
+            )
+        )
+        self.add_parameter(
+            Parameter(
                 name="status",
                 type="str",
                 tooltip="파이프라인 전체 완료 상태",
@@ -144,6 +162,7 @@ class VideoMaskInpaintingAllInOneNode(DataNode):
     def process(self) -> None:
         from pipeline.config import PipelineConfig, load_config
         from pipeline.orchestrator import PipelineOrchestrator
+        from pipeline.node06_compositor import create_red_overlay_video
 
         video_val = self.get_parameter_value("input_video")
         if hasattr(video_val, "value"):
@@ -186,5 +205,27 @@ class VideoMaskInpaintingAllInOneNode(DataNode):
             negative_prompt=neg_prompt,
         )
 
+        # Red Overlay 비디오 생성
+        red_video_path = ""
+        masks_dir_path = ""
+        try:
+            ws = config.workspace
+            frames_p = ws.frames_path
+            masks_p = ws.masks_feathered_path
+            if frames_p.exists() and masks_p.exists():
+                masks_dir_path = str(masks_p)
+                red_out = str(Path(final_path).parent / f"{Path(final_path).stem}_red_overlay.mp4")
+                red_video_path = create_red_overlay_video(
+                    orig_video=input_video,
+                    frames_dir=frames_p,
+                    masks_dir=masks_p,
+                    output_path=red_out,
+                )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Red overlay video creation failed: {e}")
+
         self.set_parameter_value("final_video_path", final_path)
+        self.set_parameter_value("red_overlay_video_path", red_video_path)
+        self.set_parameter_value("masks_dir", masks_dir_path)
         self.set_parameter_value("status", f"Complete: {final_path}")

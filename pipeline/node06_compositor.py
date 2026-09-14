@@ -282,3 +282,85 @@ def run_node06(
     logger.info("Node 06 완료")
 
     return str(output_path)
+
+
+def create_red_overlay_video(
+    orig_video: str,
+    frames_dir: Path,
+    masks_dir: Path,
+    output_path: str,
+    fps: float = 24.0,
+    alpha_weight: float = 0.5,
+    codec: str = "h264_nvenc",
+) -> str:
+    """
+    원본 영상에 마스크 영역을 반투명 빨간색(Red Overlay)으로 합성한
+    검수용 비디오를 렌더링합니다.
+    """
+    import tempfile
+
+    logger.info("=" * 60)
+    logger.info("Red Mask Overlay Video 생성 시작")
+    logger.info("=" * 60)
+
+    temp_dir = Path(tempfile.mkdtemp(prefix="gt_red_overlay_"))
+    try:
+        frame_files = sorted(
+            f for f in frames_dir.iterdir()
+            if f.suffix.lower() in (".jpg", ".png")
+        )
+        mask_files = sorted(masks_dir.glob("*.png"))
+        count = min(len(frame_files), len(mask_files))
+
+        if count == 0:
+            raise RuntimeError("오버레이할 프레임이 없습니다.")
+
+        for i in range(count):
+            orig = cv2.imread(str(frame_files[i]))
+            mask = cv2.imread(str(mask_files[i]), cv2.IMREAD_GRAYSCALE)
+            if orig is None or mask is None:
+                continue
+
+            h, w = orig.shape[:2]
+            if mask.shape[:2] != (h, w):
+                mask = cv2.resize(mask, (w, h), interpolation=cv2.INTER_LINEAR)
+
+            m = (mask.astype(np.float32) / 255.0)[:, :, np.newaxis]
+            red_layer = np.zeros_like(orig)
+            red_layer[:, :] = [0, 0, 255]  # BGR Red
+
+            # Red Overlay 합성
+            overlay = orig.astype(np.float32) * (1.0 - m * alpha_weight) + red_layer.astype(np.float32) * (m * alpha_weight)
+            overlay = np.clip(overlay, 0, 255).astype(np.uint8)
+
+            cv2.imwrite(str(temp_dir / f"{i:05d}.png"), overlay)
+
+        out_path = Path(output_path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # FFmpeg 인코딩
+        input_pattern = str(temp_dir / "%05d.png")
+        ffmpeg_cmd = [
+            "ffmpeg", "-y",
+            "-framerate", str(fps),
+            "-i", input_pattern,
+            "-i", orig_video,
+            "-map", "0:v",
+            "-map", "1:a?",
+            "-c:v", codec if shutil.which("ffmpeg") else "libx264",
+            "-pix_fmt", "yuv420p",
+            str(out_path),
+        ]
+
+        # fallback codec
+        try:
+            subprocess.run(ffmpeg_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except Exception:
+            # NVENC 실패 시 libx264 폴백
+            ffmpeg_cmd[ffmpeg_cmd.index(codec)] = "libx264"
+            subprocess.run(ffmpeg_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        logger.info(f"Red Mask Overlay Video 생성 완료: {out_path}")
+        return str(out_path)
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)

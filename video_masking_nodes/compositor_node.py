@@ -91,6 +91,17 @@ class VideoCompositorNode(DataNode):
             )
         )
 
+        self.add_parameter(
+            Parameter(
+                name="frames_dir",
+                type="str",
+                default_value="",
+                tooltip="원본 프레임 디렉토리 (Red Overlay 검수 비디오 생성 시 필요, 선택)",
+                display_name="Frames Directory",
+                allowed_modes={ParameterMode.INPUT, ParameterMode.PROPERTY},
+            )
+        )
+
         # Outputs
         self.add_parameter(
             Parameter(
@@ -98,6 +109,15 @@ class VideoCompositorNode(DataNode):
                 type="str",
                 tooltip="완성된 최종 비디오 파일 경로",
                 display_name="Final Video Path",
+                allowed_modes={ParameterMode.OUTPUT},
+            )
+        )
+        self.add_parameter(
+            Parameter(
+                name="red_overlay_video_path",
+                type="str",
+                tooltip="마스크 영역이 빨간색으로 오버레이된 검수용 비디오 파일 경로",
+                display_name="Red Overlay Video Path",
                 allowed_modes={ParameterMode.OUTPUT},
             )
         )
@@ -113,7 +133,7 @@ class VideoCompositorNode(DataNode):
 
     def process(self) -> None:
         from pipeline.config import CompositeConfig
-        from pipeline.node06_compositor import run_node06
+        from pipeline.node06_compositor import run_node06, create_red_overlay_video
 
         orig_video_val = self.get_parameter_value("orig_video_path")
         if hasattr(orig_video_val, "value"):
@@ -123,6 +143,7 @@ class VideoCompositorNode(DataNode):
 
         gen_frames_dir = (self.get_parameter_value("generated_frames_dir") or "").strip()
         masks_dir = (self.get_parameter_value("masks_dir") or "").strip()
+        frames_dir = (self.get_parameter_value("frames_dir") or "").strip()
         out_video = (self.get_parameter_value("output_video_path") or "").strip()
         codec = self.get_parameter_value("codec") or "h264_nvenc"
         crf = int(self.get_parameter_value("crf") or 18)
@@ -146,5 +167,22 @@ class VideoCompositorNode(DataNode):
             config=cfg,
         )
 
+        # Red Overlay 비디오 생성 (frames_dir이 주어진 경우)
+        red_video_path = ""
+        if frames_dir and Path(frames_dir).exists():
+            red_out = str(Path(out_video).parent / f"{Path(out_video).stem}_red_overlay.mp4")
+            try:
+                red_video_path = create_red_overlay_video(
+                    orig_video=orig_video,
+                    frames_dir=Path(frames_dir),
+                    masks_dir=Path(masks_dir),
+                    output_path=red_out,
+                    codec=codec,
+                )
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Red overlay video creation skipped: {e}")
+
         self.set_parameter_value("final_video_path", final_path)
+        self.set_parameter_value("red_overlay_video_path", red_video_path)
         self.set_parameter_value("status", f"Successfully rendered: {final_path}")

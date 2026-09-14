@@ -74,6 +74,14 @@ def _refine_single_mask(args: Tuple[str, str, int, int, int, float]) -> str:
     # 페더링 마스크는 연속값이므로 그대로 저장
     cv2.imwrite(output_path, mask)
 
+    # Red 컬러 마스크 생성 (R 채널에 마스크, B/G는 0)
+    if len(args) > 6 and args[6]:
+        red_output_path = args[6]
+        h, w = mask.shape[:2]
+        red_matte = np.zeros((h, w, 3), dtype=np.uint8)
+        red_matte[:, :, 2] = mask  # BGR: Red channel
+        cv2.imwrite(red_output_path, red_matte)
+
     return output_path
 
 
@@ -138,12 +146,13 @@ def _validate_mask_temporal_consistency(
 def run_node04(
     workspace: WorkspaceConfig,
     config: MaskRefinementConfig,
-) -> Path:
+    red_masks_dir: Optional[Path] = None,
+) -> Tuple[Path, Optional[Path]]:
     """
     Node 04를 실행합니다.
 
     바이너리 마스크를 형태학적 후처리(팽창 + 가우시안 블러)하여
-    자연스러운 페더링 마스크를 생성합니다.
+    자연스러운 페더링 마스크 및 Red 컬러 마스크를 생성합니다.
 
     Parameters
     ----------
@@ -151,11 +160,13 @@ def run_node04(
         워크스페이스 설정.
     config : MaskRefinementConfig
         마스크 후처리 설정.
+    red_masks_dir : Optional[Path]
+        Red 컬러 마스크 저장 디렉토리 (선택).
 
     Returns
     -------
-    Path
-        페더링 마스크 디렉토리 경로.
+    Tuple[Path, Optional[Path]]
+        (페더링 마스크 디렉토리 경로, Red 컬러 마스크 디렉토리 경로)
     """
     logger.info("=" * 60)
     logger.info("Node 04: Mask Morphological Refinement 시작")
@@ -168,6 +179,11 @@ def run_node04(
     if masks_feathered_dir.exists():
         shutil.rmtree(masks_feathered_dir)
     masks_feathered_dir.mkdir(parents=True, exist_ok=True)
+
+    if red_masks_dir is not None:
+        if red_masks_dir.exists():
+            shutil.rmtree(red_masks_dir)
+        red_masks_dir.mkdir(parents=True, exist_ok=True)
 
     # 마스크 파일 목록
     mask_files = sorted(masks_raw_dir.glob("*.png"))
@@ -190,6 +206,7 @@ def run_node04(
     tasks = []
     for mask_file in mask_files:
         output_file = masks_feathered_dir / mask_file.name
+        red_output_file = (red_masks_dir / mask_file.name) if red_masks_dir else None
         tasks.append((
             str(mask_file),
             str(output_file),
@@ -197,6 +214,7 @@ def run_node04(
             config.dilation_iterations,
             config.gaussian_kernel_size,
             config.gaussian_sigma,
+            str(red_output_file) if red_output_file else None,
         ))
 
     num_workers = min(config.num_workers, cpu_count(), len(tasks))
@@ -221,6 +239,8 @@ def run_node04(
         logger.info("  시간적 일관성 양호")
 
     logger.info(f"  페더링 마스크 생성 완료 -> {masks_feathered_dir}")
+    if red_masks_dir:
+        logger.info(f"  Red 컬러 마스크 생성 완료 -> {red_masks_dir}")
     logger.info("Node 04 완료")
 
-    return masks_feathered_dir
+    return masks_feathered_dir, red_masks_dir
