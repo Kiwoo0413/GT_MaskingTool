@@ -29,20 +29,41 @@ from .vram_manager import flush_vram, log_vram_status, vram_scope, get_torch_dty
 logger = logging.getLogger(__name__)
 
 
-def _ensure_checkpoint(config: SAM2Config) -> str:
+def _ensure_checkpoint(config: SAM2Config) -> tuple[str, str]:
     """
-    SAM 2 체크포인트가 존재하는지 확인하고, 없으면 다운로드합니다.
+    SAM 2 체크포인트 및 모델 config를 찾거나 다운로드합니다.
+    Hugging Face 캐시(예: sam2.1-hiera-large)를 우선 탐색합니다.
 
     Returns
     -------
-    str
-        체크포인트 파일 경로.
+    tuple[str, str]
+        (checkpoint_path, model_cfg)
     """
     ckpt_path = Path(config.checkpoint)
 
+    # 1) Hugging Face hub 캐시 자동 탐색 (sam2.1-hiera-large 등)
+    hf_cache = Path.home() / ".cache" / "huggingface" / "hub"
+    if hf_cache.exists():
+        large_ckpts = list(hf_cache.glob("**/sam2.1_hiera_large.pt"))
+        if large_ckpts and large_ckpts[0].exists():
+            ckpt_str = str(large_ckpts[0])
+            logger.info(f"  HuggingFace 캐시에서 SAM 2.1 Hiera Large 발견: {ckpt_str}")
+            return ckpt_str, "configs/sam2.1/sam2.1_hiera_l.yaml"
+
+        other_ckpts = list(hf_cache.glob("**/sam2*.pt"))
+        if other_ckpts and other_ckpts[0].exists():
+            ckpt_str = str(other_ckpts[0])
+            logger.info(f"  HuggingFace 캐시에서 SAM 2 체크포인트 발견: {ckpt_str}")
+            if "large" in ckpt_str.lower() or "_l." in ckpt_str.lower():
+                return ckpt_str, "configs/sam2.1/sam2.1_hiera_l.yaml"
+            elif "base_plus" in ckpt_str.lower() or "_b+." in ckpt_str.lower():
+                return ckpt_str, "configs/sam2.1/sam2.1_hiera_b+.yaml"
+            return ckpt_str, config.model_cfg
+
+    # 2) 명시적 로컬 경로 확인
     if ckpt_path.exists():
         logger.info(f"  SAM 2 체크포인트 발견: {ckpt_path}")
-        return str(ckpt_path)
+        return str(ckpt_path), config.model_cfg
 
     if not config.auto_download:
         raise FileNotFoundError(
@@ -50,7 +71,7 @@ def _ensure_checkpoint(config: SAM2Config) -> str:
             f"다운로드 URL: {config.checkpoint_url}"
         )
 
-    # 자동 다운로드
+    # 3) 자동 다운로드
     logger.info(f"  SAM 2 체크포인트 다운로드 중: {config.checkpoint_url}")
     ckpt_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -58,7 +79,7 @@ def _ensure_checkpoint(config: SAM2Config) -> str:
     urllib.request.urlretrieve(config.checkpoint_url, str(ckpt_path))
     logger.info(f"  다운로드 완료: {ckpt_path}")
 
-    return str(ckpt_path)
+    return str(ckpt_path), config.model_cfg
 
 
 def _save_mask(
@@ -123,8 +144,8 @@ def run_node03(
         shutil.rmtree(masks_dir)
     masks_dir.mkdir(parents=True, exist_ok=True)
 
-    # 체크포인트 확인
-    checkpoint = _ensure_checkpoint(config)
+    # 체크포인트 및 모델 설정 확인
+    checkpoint, model_cfg = _ensure_checkpoint(config)
 
     log_vram_status("Node 03 시작 전")
 
@@ -137,6 +158,7 @@ def run_node03(
             metadata=metadata,
             config=config,
             checkpoint=checkpoint,
+            model_cfg=model_cfg,
         )
 
     log_vram_status("Node 03 종료 후")
@@ -156,6 +178,7 @@ def _run_sam2_tracking(
     metadata: VideoMetadata,
     config: SAM2Config,
     checkpoint: str,
+    model_cfg: str,
 ) -> None:
     """SAM 2 모델 로드 및 트래킹 실행 (VRAM 스코프 내)."""
 
@@ -178,9 +201,9 @@ def _run_sam2_tracking(
             torch.backends.cudnn.allow_tf32 = True
 
     # 모델 빌드
-    logger.info(f"  SAM 2 모델 로드: cfg={config.model_cfg}, ckpt={checkpoint}")
+    logger.info(f"  SAM 2 모델 로드: cfg={model_cfg}, ckpt={checkpoint}")
     predictor = build_sam2_video_predictor(
-        config.model_cfg, checkpoint, device=device
+        model_cfg, checkpoint, device=device
     )
     log_vram_status("SAM 2 모델 로드 후")
 

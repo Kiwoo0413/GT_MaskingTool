@@ -125,6 +125,23 @@ def _compose_all_frames(
     return count
 
 
+def _get_ffmpeg_exe() -> str:
+    """FFmpeg 실행 파일 경로를 반환합니다 (시스템 PATH 또는 imageio-ffmpeg)."""
+    sys_ffmpeg = shutil.which("ffmpeg")
+    if sys_ffmpeg:
+        return sys_ffmpeg
+
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        pass
+
+    raise RuntimeError(
+        "FFmpeg을 찾을 수 없습니다. FFmpeg을 설치하고 PATH에 추가하세요."
+    )
+
+
 def _encode_video_ffmpeg(
     composite_dir: Path,
     input_video: str,
@@ -138,8 +155,9 @@ def _encode_video_ffmpeg(
 
     NVENC H.264 인코딩 + 원본 오디오 스트림 결합.
     """
+    ffmpeg_bin = _get_ffmpeg_exe()
     cmd = [
-        "ffmpeg", "-y",
+        ffmpeg_bin, "-y",
         "-r", str(fps),
         "-i", str(composite_dir / "%05d.png"),
     ]
@@ -340,14 +358,15 @@ def create_red_overlay_video(
 
         # FFmpeg 인코딩
         input_pattern = str(temp_dir / "%05d.png")
+        ffmpeg_bin = _get_ffmpeg_exe()
         ffmpeg_cmd = [
-            "ffmpeg", "-y",
+            ffmpeg_bin, "-y",
             "-framerate", str(fps),
             "-i", input_pattern,
             "-i", orig_video,
             "-map", "0:v",
             "-map", "1:a?",
-            "-c:v", codec if shutil.which("ffmpeg") else "libx264",
+            "-c:v", codec,
             "-pix_fmt", "yuv420p",
             str(out_path),
         ]

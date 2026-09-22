@@ -102,6 +102,65 @@ def parse_json_input(json_str: str) -> ParsedIntent:
     return intent
 
 
+def _parse_flexible_points(val: str) -> list[list[int]]:
+    val = val.strip()
+    try:
+        parsed = json.loads(val)
+        if isinstance(parsed, list):
+            if len(parsed) > 0 and isinstance(parsed[0], list):
+                return parsed
+            elif len(parsed) == 2 and all(isinstance(x, (int, float)) for x in parsed):
+                return [[int(parsed[0]), int(parsed[1])]]
+    except Exception:
+        pass
+
+    cleaned = val.strip("[]() ")
+    parts = [int(p.strip()) for p in cleaned.replace(",", " ").split() if p.strip()]
+    if len(parts) == 2:
+        return [[parts[0], parts[1]]]
+    elif len(parts) > 2 and len(parts) % 2 == 0:
+        return [[parts[i], parts[i + 1]] for i in range(0, len(parts), 2)]
+    raise ValueError(
+        f"시드 포인트를 파싱할 수 없습니다: '{val}'. 예: '640,360' 또는 '[[640, 360]]'"
+    )
+
+
+def _parse_flexible_box(val: str) -> list[int]:
+    val = val.strip()
+    try:
+        parsed = json.loads(val)
+        if isinstance(parsed, list) and len(parsed) == 4:
+            return [int(x) for x in parsed]
+    except Exception:
+        pass
+
+    cleaned = val.strip("[]() ")
+    parts = [int(p.strip()) for p in cleaned.replace(",", " ").split() if p.strip()]
+    if len(parts) == 4:
+        return parts
+    raise ValueError(
+        f"시드 박스를 파싱할 수 없습니다: '{val}'. 예: '[100, 100, 400, 400]' 또는 '100,100,400,400'"
+    )
+
+
+def _parse_flexible_range(val: str) -> tuple[int, int]:
+    val = val.strip()
+    try:
+        parsed = json.loads(val)
+        if isinstance(parsed, (list, tuple)) and len(parsed) == 2:
+            return (int(parsed[0]), int(parsed[1]))
+    except Exception:
+        pass
+
+    cleaned = val.strip("[]() ")
+    parts = [int(p.strip()) for p in cleaned.replace(",", " ").split() if p.strip()]
+    if len(parts) == 2:
+        return (parts[0], parts[1])
+    raise ValueError(
+        f"프레임 범위를 파싱할 수 없습니다: '{val}'. 예: '[0, 50]' 또는 '0,50'"
+    )
+
+
 def parse_cli_args(
     prompt: str,
     seed_points: Optional[str] = None,
@@ -139,13 +198,13 @@ def parse_cli_args(
     )
 
     if seed_points is not None:
-        coords = json.loads(seed_points)
+        coords = _parse_flexible_points(seed_points)
         intent.seed_coordinates = coords
         intent.coordinate_type = "point"
         # 기본 레이블: 모든 포인트가 positive
         intent.coordinate_labels = [1] * len(coords)
     elif seed_box is not None:
-        coords = json.loads(seed_box)
+        coords = _parse_flexible_box(seed_box)
         intent.seed_coordinates = coords
         intent.coordinate_type = "box"
     else:
@@ -154,9 +213,7 @@ def parse_cli_args(
         )
 
     if frame_range is not None:
-        fr = json.loads(frame_range)
-        if len(fr) == 2:
-            intent.frame_range = (int(fr[0]), int(fr[1]))
+        intent.frame_range = _parse_flexible_range(frame_range)
 
     return intent
 

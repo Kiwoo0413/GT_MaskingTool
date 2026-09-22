@@ -46,7 +46,8 @@ def _refine_single_mask(args: Tuple[str, str, int, int, int, float]) -> str:
         dilation_iterations,
         gaussian_kernel_size,
         gaussian_sigma,
-    ) = args
+    ) = args[:6]
+    red_output_path = args[6] if len(args) > 6 else None
 
     # 마스크 읽기 (그레이스케일)
     mask = cv2.imread(input_path, cv2.IMREAD_GRAYSCALE)
@@ -75,8 +76,7 @@ def _refine_single_mask(args: Tuple[str, str, int, int, int, float]) -> str:
     cv2.imwrite(output_path, mask)
 
     # Red 컬러 마스크 생성 (R 채널에 마스크, B/G는 0)
-    if len(args) > 6 and args[6]:
-        red_output_path = args[6]
+    if red_output_path:
         h, w = mask.shape[:2]
         red_matte = np.zeros((h, w, 3), dtype=np.uint8)
         red_matte[:, :, 2] = mask  # BGR: Red channel

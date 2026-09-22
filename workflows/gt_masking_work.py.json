@@ -1,0 +1,23 @@
+{
+  "schema_version": "0.2.0",
+  "saved_at": "2026-09-14T06:23:06.626458+00:00",
+  "situation": {
+    "name": "save_workflow",
+    "macro": "{workspace_dir}/{sub_dirs?:/}{file_name_base}.{file_extension}",
+    "policy": {
+      "on_collision": "overwrite",
+      "create_dirs": true
+    },
+    "variables": {
+      "file_name_base": "gt_masking_work",
+      "file_extension": "py"
+    }
+  },
+  "workflow": {
+    "name": "unsaved:4a6fb640-52e2-43c4-a42d-84e04cdca28f",
+    "created": "2026-09-14T06:22:42.954527+00:00"
+  },
+  "flow": {
+    "name": "ControlFlow_1"
+  }
+}

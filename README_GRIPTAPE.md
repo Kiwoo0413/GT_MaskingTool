@@ -34,8 +34,15 @@ Griptape 가상환경 또는 시스템 Python 환경에서 패키지를 설치�
 ```bash
 cd griptape-nodes-library-masking
 pip install -r requirements.txt
+pip install git+https://github.com/facebookresearch/sam2.git
 ```
-*핵심 패키지*: `torch>=2.4.0`, `diffusers>=0.30.0`, `opencv-python>=4.8.0`, `ffmpeg-python`, `numpy`, `pillow`
+> [!TIP]
+> **GPU 가속 (CUDA) 필수**:
+> 본 파이프라인은 RTX 4080 등 NVIDIA GPU를 활용하므로 CUDA 지원 PyTorch가 필요합니다:
+> ```bash
+> pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124 --upgrade
+> ```
+> *내장 FFmpeg*: `imageio-ffmpeg`가 자동 설치되므로 시스템 환경 변수에 FFmpeg을 따로 등록하지 않아도 인코딩이 정상 동작합니다.
 
 ### [3단계] Griptape Nodes Desktop에 라이브러리 등록
 1. 설정 파일 열기: `%APPDATA%\Griptape Nodes\xdg_config_home\griptape_nodes\griptape_nodes_config.json`
@@ -51,6 +58,11 @@ pip install -r requirements.txt
 1. **Griptape Nodes Desktop** 앱을 엽니다.
 2. 좌측 하단의 **`Refresh Libraries`** 버튼을 클릭합니다. (또는 우측 상단 `Engine` -> `Restart`)
 3. 사이드바의 **`LIBRARIES`** 및 **`NODES`** 탭에 **`Video Mask & Inpainting`** 카테고리가 나타납니다! 🎉
+
+### [5단계] 사전 구성된 워크플로우 열기 (선택)
+본 저장소에는 바로 실행 가능한 완성형 워크플로우 파일이 동봉되어 있습니다:
+- **워크플로우 파일**: `workflows/gt_masking_work.py`
+- Griptape Nodes Desktop에서 워크플로우를 열면 `Load Video` 노드와 `Mask Inpainting (All-in-One)` 노드가 사전 연결된 상태로 바로 시작할 수 있습니다.
 
 ---
 

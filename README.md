@@ -26,11 +26,14 @@ Griptape 라이브러리 폴더(`D:\AI\GripTape\libraries\` 또는 원하는 위
 git clone https://github.com/Kiwoo0413/GT_MaskingTool.git griptape-nodes-library-masking
 ```
 
-### 2. 의존성 설치
 ```bash
 cd griptape-nodes-library-masking
 pip install -r requirements.txt
+pip install git+https://github.com/facebookresearch/sam2.git
 ```
+> [!TIP]
+> GPU(CUDA) 가속을 위해 CUDA 지원 PyTorch를 사용하세요:
+> `pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124 --upgrade`
 
 ### 3. Griptape Nodes Desktop 등록
 `%APPDATA%\Griptape Nodes\xdg_config_home\griptape_nodes\griptape_nodes_config.json`의 `libraries_to_register`에 라이브러리 경로를 추가합니다:

@@ -195,7 +195,9 @@ def log_vram_status(label: str = "") -> None:
 
     allocated = get_vram_usage_mb()
     reserved = get_vram_reserved_mb()
-    total = torch.cuda.get_device_properties(0).total_mem / (1024 * 1024)
+    props = torch.cuda.get_device_properties(0)
+    total_bytes = getattr(props, "total_memory", getattr(props, "total_mem", 0))
+    total = total_bytes / (1024 * 1024)
     free = total - allocated
 
     logger.info(

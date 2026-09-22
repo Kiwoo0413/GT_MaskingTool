@@ -10,12 +10,19 @@ opencv-python>=4.8.0
 
 # Diffusers & Transformers (Video DiT Inpainting)
 diffusers>=0.30.0
-transformers>=4.38.0
-accelerate>=0.25.0
+transformers>=4.44.0
+accelerate>=0.33.0
 safetensors>=0.4.0
+sentencepiece>=0.2.0
+protobuf
+tiktoken
 
-# SAM 2 (install separately: pip install git+https://github.com/facebookresearch/sam2.git)
-# sam-2
+# Video & Audio I/O
+ffmpeg-python>=0.2.0
+imageio-ffmpeg>=0.5.0
+
+# SAM 2 (Git repository)
+# pip install git+https://github.com/facebookresearch/sam2.git
 
 # Quantization
 bitsandbytes>=0.42.0

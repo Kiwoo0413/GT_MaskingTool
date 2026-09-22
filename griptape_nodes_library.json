@@ -20,8 +20,14 @@
       "pip_dependencies": [
         "torch>=2.4.0",
         "diffusers>=0.30.0",
+        "transformers>=4.44.0",
+        "accelerate>=0.33.0",
+        "sentencepiece",
+        "protobuf",
+        "tiktoken",
         "opencv-python>=4.8.0",
         "ffmpeg-python>=0.2.0",
+        "imageio-ffmpeg",
         "numpy>=1.26.0",
         "pillow>=10.0.0"
       ]
